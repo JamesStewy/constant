@@ -16,29 +16,34 @@ The following methods are available to use in a constant.
 
 		Example:
 			`{{ const "host" }}:{{ const "port" }}`
-			If host=`localhost` and port=`3306` then the above template would return `localhost:3306`.
+			If host=`localhost` and port=`3306` then the above template would return
+			`localhost:3306`.
 
 		Caution:
-			Although there is a check in place to test if a constant references itself,
-			there is no check for cyclic dependancy. If a cyclic dependancy is created
-			then the program will enter an infinite loop.
+			Although there is a check in place to test if a constant references
+			itself, there is no check for cyclic dependancy. If a cyclic dependancy
+			is created then the program will enter an infinite loop.
 
 	{{ list }}
 		Returns a slice of all constants in the pool except itself.
 
 		Example:
 			`{{ range list }}{{ . }}={{ const . }}; {{ end }}`
-			If host=`localhost` and port=`3306` then the above template would return `host=localhost; port=3306; `.
+			If host=`localhost` and port=`3306` then the above template would return
+			`host=localhost; port=3306; `.
 
 	{{ isset "name" }}
-		Returns whether or not a constant named 'name' is in the current pool. Same as pool.IsSet(name).
+		Returns whether or not a constant named 'name' is in the current pool. Same
+		as pool.IsSet(name).
 
 		Example:
 			`{{ const "protocol" }}://{{ const "domain" }}{{if isset "port"}}:{{ const "port" }}{{end}}/{{ const "page" }}`
 
-			If protocol=`http`, domain=`localhost` and page=`index.html` then the above template would return `http://localhost/index.html`.
+			If protocol=`http`, domain=`localhost` and page=`index.html` then the
+			above template would return `http://localhost/index.html`.
 
-			Or if the same constants are set as well as port=`8080` then the above template would return `http://localhost:8080/index.html`.
+			Or if the same constants are set as well as port=`8080` then the above
+			template would return `http://localhost:8080/index.html`.
 
 Example
 

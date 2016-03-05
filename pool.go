@@ -8,7 +8,7 @@ import (
 )
 
 type Pool struct {
-	sync.RWMutex
+	mutex    sync.RWMutex
 	prefix   string
 	defaults map[string]*string
 }
@@ -21,8 +21,8 @@ func NewPool(prefix string) *Pool {
 }
 
 func (pool *Pool) New(name string, default_val interface{}) error {
-	pool.Lock()
-	defer pool.Unlock()
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
 
 	if pool.defaults[name] != nil {
 		return errors.New("Constant already exists")
@@ -71,8 +71,8 @@ func (pool *Pool) New(name string, default_val interface{}) error {
 }
 
 func (pool *Pool) Delete(name string) error {
-	pool.Lock()
-	defer pool.Unlock()
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
 
 	if pool.defaults[name] == nil {
 		return errors.New("Constant doesn't exists")
@@ -83,15 +83,15 @@ func (pool *Pool) Delete(name string) error {
 }
 
 func (pool *Pool) Prefix() string {
-	pool.RLock()
-	defer pool.RUnlock()
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
 
 	return pool.prefix
 }
 
 func (pool *Pool) List() []string {
-	pool.RLock()
-	defer pool.RUnlock()
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
 
 	consts := make([]string, 0, len(pool.defaults))
 	for c := range pool.defaults {
@@ -101,8 +101,8 @@ func (pool *Pool) List() []string {
 }
 
 func (pool *Pool) Environment() []string {
-	pool.RLock()
-	defer pool.RUnlock()
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
 
 	consts := pool.List()
 	for i := 0; i < len(consts); i++ {

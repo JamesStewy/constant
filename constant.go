@@ -6,8 +6,8 @@ import (
 )
 
 func (pool *Pool) Str(name string) (val string) {
-	pool.RLock()
-	defer pool.RUnlock()
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
 
 	if pool.defaults[name] == nil {
 		return ""
@@ -38,8 +38,8 @@ func (pool *Pool) Bool(name string) (val bool, err error) {
 }
 
 func (pool *Pool) IsSet(name string) bool {
-	pool.RLock()
-	defer pool.RUnlock()
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
 
 	return pool.defaults[name] != nil
 }

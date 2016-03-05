@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 )
 
 type Pool struct {
+	sync.RWMutex
 	prefix   string
 	defaults map[string]cnst
 }
@@ -19,7 +21,10 @@ func NewPool(prefix string) *Pool {
 }
 
 func (pool *Pool) New(name string, default_val interface{}) error {
-	if pool.IsSet(name) {
+	pool.Lock()
+	defer pool.Unlock()
+
+	if pool.defaults[name].set {
 		return errors.New("Constant already exists")
 	}
 
@@ -62,7 +67,10 @@ func (pool *Pool) New(name string, default_val interface{}) error {
 }
 
 func (pool *Pool) Delete(name string) error {
-	if !pool.IsSet(name) {
+	pool.Lock()
+	defer pool.Unlock()
+
+	if !pool.defaults[name].set {
 		return errors.New("Constant doesn't exists")
 	}
 
@@ -71,10 +79,16 @@ func (pool *Pool) Delete(name string) error {
 }
 
 func (pool *Pool) Prefix() string {
+	pool.RLock()
+	defer pool.RUnlock()
+
 	return pool.prefix
 }
 
 func (pool *Pool) List() []string {
+	pool.RLock()
+	defer pool.RUnlock()
+
 	consts := make([]string, 0, len(pool.defaults))
 	for c := range pool.defaults {
 		consts = append(consts, c)
@@ -83,6 +97,9 @@ func (pool *Pool) List() []string {
 }
 
 func (pool *Pool) Environment() []string {
+	pool.RLock()
+	defer pool.RUnlock()
+
 	consts := pool.List()
 	for i := 0; i < len(consts); i++ {
 		consts[i] = pool.env_name(consts[i])

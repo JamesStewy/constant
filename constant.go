@@ -11,7 +11,10 @@ type cnst struct {
 }
 
 func (pool *Pool) Str(name string) (val string) {
-	if !pool.IsSet(name) {
+	pool.RLock()
+	defer pool.RUnlock()
+
+	if !pool.defaults[name].set {
 		return ""
 	}
 
@@ -40,6 +43,9 @@ func (pool *Pool) Bool(name string) (val bool, err error) {
 }
 
 func (pool *Pool) IsSet(name string) bool {
+	pool.RLock()
+	defer pool.RUnlock()
+
 	return pool.defaults[name].set
 }
 

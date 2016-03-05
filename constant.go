@@ -38,6 +38,9 @@ func (pool *Pool) Str(name string) string {
 			}
 			return consts
 		},
+		"isset": func(in_name string) bool {
+			return pool.IsSet(in_name)
+		},
 	}).Parse(tmpl)
 
 	if err != nil {

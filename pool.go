@@ -36,6 +36,12 @@ func (pool *Pool) New(name string, default_val interface{}) error {
 		} else {
 			return errors.New("Unabled to assert type string on default value")
 		}
+	case []byte:
+		if val, ok := default_val.([]byte); ok {
+			str_val = string(val)
+		} else {
+			return errors.New("Unabled to assert type []byte on default value")
+		}
 	case fmt.Stringer:
 		if val, ok := default_val.(fmt.Stringer); ok {
 			str_val = val.String()

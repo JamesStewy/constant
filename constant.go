@@ -1,11 +1,13 @@
 package constant
 
 import (
+	"bytes"
 	"os"
 	"strconv"
+	"text/template"
 )
 
-func (pool *Pool) Str(name string) (val string) {
+func (pool *Pool) Str(name string) string {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
@@ -13,13 +15,32 @@ func (pool *Pool) Str(name string) (val string) {
 		return ""
 	}
 
+	var tmpl string
 	if env := os.Getenv(pool.env_name(name)); env == "" {
-		val = *pool.defaults[name]
+		tmpl = *pool.defaults[name]
 	} else {
-		val = env
+		tmpl = env
 	}
 
-	return
+	t, err := template.New("constant").Funcs(template.FuncMap{
+		"const": func(in_name string) string {
+			if in_name == name {
+				return ""
+			}
+			return pool.Str(in_name)
+		},
+	}).Parse(tmpl)
+
+	if err != nil {
+		return ""
+	}
+
+	var byte_string bytes.Buffer
+	if err = t.Execute(&byte_string, nil); err != nil {
+		return ""
+	}
+
+	return byte_string.String()
 }
 
 func (pool *Pool) Int(name string) (val int, err error) {

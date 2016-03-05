@@ -7,12 +7,18 @@ import (
 	"sync"
 )
 
+// Pool represents a collection of constants.
+// All constants stored in the same pool can be accessed using the template system.
 type Pool struct {
 	mutex    sync.RWMutex
 	prefix   string
 	defaults map[string]*string
 }
 
+// Creates a new pool.
+//
+// Prefix sets the environment variable prefix which is prepended to constants names when searching the runtime environment.
+// For example if a pool has a prefix 'MYSQL_' and a constant named 'HOST' then constant 'HOST' would be set to the value of the environment variable 'MYSQL_HOST'.
 func NewPool(prefix string) *Pool {
 	return &Pool{
 		prefix:   prefix,
@@ -20,6 +26,21 @@ func NewPool(prefix string) *Pool {
 	}
 }
 
+/*
+Adds a new constant to the pool.
+
+name: Name of the constant.
+
+default_val: The default value for the constant if no environment variable is available.
+
+default_val must be one of the following types:
+	string
+	[]byte
+	fmt.Stringer (https://golang.org/pkg/fmt/#Stringer)
+	int
+	float64
+	bool
+*/
 func (pool *Pool) New(name string, default_val interface{}) error {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
@@ -76,6 +97,7 @@ func (pool *Pool) New(name string, default_val interface{}) error {
 	return nil
 }
 
+// Deletes constant with name 'name' from the pool.
 func (pool *Pool) Delete(name string) error {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
@@ -88,6 +110,7 @@ func (pool *Pool) Delete(name string) error {
 	return nil
 }
 
+// Returns the prefix for the pool.
 func (pool *Pool) Prefix() string {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
@@ -95,6 +118,7 @@ func (pool *Pool) Prefix() string {
 	return pool.prefix
 }
 
+// Returns a slice of all constants in the pool.
 func (pool *Pool) List() []string {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
@@ -106,6 +130,7 @@ func (pool *Pool) List() []string {
 	return consts
 }
 
+// Returns a slice of all constants in the pool with the pool's prefix prepended.
 func (pool *Pool) Environment() []string {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()

@@ -29,6 +29,15 @@ func (pool *Pool) Str(name string) string {
 			}
 			return pool.Str(in_name)
 		},
+		"list": func() []string {
+			consts := pool.List()
+			for i, cnst := range consts {
+				if cnst == name {
+					consts = append(consts[:i], consts[i+1:]...)
+				}
+			}
+			return consts
+		},
 	}).Parse(tmpl)
 
 	if err != nil {

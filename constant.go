@@ -5,12 +5,22 @@ import (
 	"strconv"
 )
 
+type cnst struct {
+	val string
+	set bool
+}
+
 func (pool *Pool) Str(name string) (val string) {
+	if !pool.IsSet(name) {
+		return ""
+	}
+
 	if env := os.Getenv(pool.env_name(name)); env == "" {
-		val = pool.defaults[name]
+		val = pool.defaults[name].val
 	} else {
 		val = env
 	}
+
 	return
 }
 
@@ -27,6 +37,10 @@ func (pool *Pool) Float(name string, bitSize int) (val float64, err error) {
 func (pool *Pool) Bool(name string) (val bool, err error) {
 	val, err = strconv.ParseBool(pool.Str(name))
 	return
+}
+
+func (pool *Pool) IsSet(name string) bool {
+	return pool.defaults[name].set
 }
 
 func (pool *Pool) env_name(name string) string {

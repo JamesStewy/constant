@@ -1,2 +1,4 @@
-# constant
-Go library to get, store and update constants from the environment
+# Go Constant
+Go library to get, store and update constants from the environment.
+
+[Documentation](https://godoc.org/github.com/JamesStewy/constant).

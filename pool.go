@@ -10,13 +10,13 @@ import (
 type Pool struct {
 	sync.RWMutex
 	prefix   string
-	defaults map[string]cnst
+	defaults map[string]*string
 }
 
 func NewPool(prefix string) *Pool {
 	return &Pool{
 		prefix:   prefix,
-		defaults: make(map[string]cnst),
+		defaults: make(map[string]*string),
 	}
 }
 
@@ -24,44 +24,48 @@ func (pool *Pool) New(name string, default_val interface{}) error {
 	pool.Lock()
 	defer pool.Unlock()
 
-	if pool.defaults[name].set {
+	if pool.defaults[name] != nil {
 		return errors.New("Constant already exists")
 	}
 
+	var str_val string
 	switch t := default_val.(type) {
 	case string:
 		if val, ok := default_val.(string); ok {
-			pool.defaults[name] = cnst{val, true}
+			str_val = val
 		} else {
 			return errors.New("Unabled to assert type string on default value")
 		}
 	case fmt.Stringer:
 		if val, ok := default_val.(fmt.Stringer); ok {
-			pool.defaults[name] = cnst{val.String(), true}
+			str_val = val.String()
 		} else {
 			return errors.New("Unabled to assert type fmt.Stringer on default value")
 		}
 	case int:
 		if val, ok := default_val.(int); ok {
-			pool.defaults[name] = cnst{strconv.Itoa(val), true}
+			str_val = strconv.Itoa(val)
 		} else {
 			return errors.New("Unabled to assert type int on default value")
 		}
 	case float64:
 		if val, ok := default_val.(float64); ok {
-			pool.defaults[name] = cnst{strconv.FormatFloat(val, 'f', -1, 64), true}
+			str_val = strconv.FormatFloat(val, 'f', -1, 64)
 		} else {
 			return errors.New("Unabled to assert type float64 on default value")
 		}
 	case bool:
 		if val, ok := default_val.(bool); ok {
-			pool.defaults[name] = cnst{strconv.FormatBool(val), true}
+			str_val = strconv.FormatBool(val)
 		} else {
 			return errors.New("Unabled to assert type bool on default value")
 		}
 	default:
 		return errors.New(fmt.Sprintf("Unexpected type %T", t))
 	}
+
+	pool.defaults[name] = new(string)
+	*pool.defaults[name] = str_val
 
 	return nil
 }
@@ -70,7 +74,7 @@ func (pool *Pool) Delete(name string) error {
 	pool.Lock()
 	defer pool.Unlock()
 
-	if !pool.defaults[name].set {
+	if pool.defaults[name] == nil {
 		return errors.New("Constant doesn't exists")
 	}
 

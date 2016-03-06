@@ -3,6 +3,7 @@ package constant
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"sync"
 )
@@ -30,6 +31,9 @@ func NewPool(prefix string) *Pool {
 Adds a new constant to the pool.
 
 name: Name of the constant.
+Must follow variable naming convention.
+Lower case letters, uppercase letters, numbers and underscore.
+Can't start with a number.
 
 default_val: The default value for the constant if no environment variable is available.
 
@@ -42,6 +46,10 @@ default_val must be one of the following types:
 	bool
 */
 func (pool *Pool) New(name string, default_val interface{}) error {
+	if !valid_name(name) {
+		return errors.New("Invalid Name")
+	}
+
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
@@ -95,6 +103,11 @@ func (pool *Pool) New(name string, default_val interface{}) error {
 	*pool.defaults[name] = str_val
 
 	return nil
+}
+
+func valid_name(name string) bool {
+	var validName = regexp.MustCompile(`^[a-zA-Z_]+[a-zA-Z0-9_]*$`)
+	return validName.MatchString(name)
 }
 
 // Deletes constant with name 'name' from the pool.

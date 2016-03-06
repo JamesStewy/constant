@@ -64,6 +64,12 @@ func (pool *Pool) Int(name string) (val int, err error) {
 	return
 }
 
+// Run Int but ignore errors
+func (pool *Pool) IntI(name string) (val int) {
+	val, _ = pool.Int(name)
+	return
+}
+
 // Returns the value of the constant in the pool named 'name' as a float64.
 //
 // Follows convention of strconv.ParseFloat (https://golang.org/pkg/strconv/#ParseFloat).
@@ -72,11 +78,23 @@ func (pool *Pool) Float(name string, bitSize int) (val float64, err error) {
 	return
 }
 
+// Run Float but ignore errors
+func (pool *Pool) FloatI(name string, bitSize int) (val float64) {
+	val, _ = pool.Float(name, bitSize)
+	return
+}
+
 // Returns the value of the constant in the pool named 'name' as a boolean.
 //
 // Follows convention of strconv.ParseBool (https://golang.org/pkg/strconv/#ParseBool).
 func (pool *Pool) Bool(name string) (val bool, err error) {
 	val, err = strconv.ParseBool(pool.Str(name))
+	return
+}
+
+// Run Bool but ignore errors
+func (pool *Pool) BoolI(name string) (val bool) {
+	val, _ = pool.Bool(name)
 	return
 }
 

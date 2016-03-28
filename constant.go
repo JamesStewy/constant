@@ -106,6 +106,17 @@ func (pool *Pool) IsSet(name string) bool {
 	return pool.defaults[name] != nil
 }
 
+// Returns the default value of the constant in the pool named 'name'.
+// If the default value contains templates the templates will not be parsed.
+// If the default value is not a string it will be converted to a string as per the strconv package (https://golang.org/pkg/strconv/).
+func (pool *Pool) Default(name string) string {
+	if pool.defaults[name] == nil {
+		return ""
+	}
+
+	return *pool.defaults[name]
+}
+
 func (pool *Pool) env_name(name string) string {
 	return pool.prefix + name
 }

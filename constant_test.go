@@ -8,8 +8,9 @@ import (
 	"testing"
 )
 
-var pool *constant.Pool
-var pool_prefix = "test_"
+var node *constant.Node
+var node_prefix = "test"
+var node_delimiter = "_"
 
 type constPair struct {
 	name  string
@@ -43,7 +44,7 @@ type invalid string
 var tests = []test_type{
 	{constPair{"string1", "string value"}, "string value", false, "string value", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, true},
 	{constPair{"string1", "already exists"}, "string value", true, "string value", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, true},
-	{constPair{"string2", ""}, "", false, "", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, true},
+	{constPair{"string2", ""}, "", false, "", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, false},
 	{constPair{"byte1", []byte("byte string value")}, "byte string value", false, "byte string value", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, true},
 	{constPair{"fmtStringer1", stringer("fmt.Stringer value")}, "fmt.Stringer value", false, "fmt.Stringer value", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, true},
 	{constPair{"int1", 12}, "12", false, "12", val_err{12, false}, val_err{12.0, false}, val_err{false, true}, true},
@@ -59,7 +60,7 @@ var tests = []test_type{
 	{constPair{"bool7", "T"}, "T", false, "T", val_err{0, true}, val_err{0.0, true}, val_err{true, false}, true},
 	{constPair{"bool8", "F"}, "F", false, "F", val_err{0, true}, val_err{0.0, true}, val_err{false, false}, true},
 	{constPair{"invalid1", invalid("not a valid type")}, "", true, "", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, false},
-	{constPair{"invalid2", nil}, "", true, "", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, false},
+	{constPair{"nil_value", nil}, "", false, "", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, false},
 	{constPair{"", "empty name"}, "", true, "", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, false},
 	{constPair{"2name", "name starting with number"}, "", true, "", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, false},
 	{constPair{"namew1thnum", "name containing number"}, "name containing number", false, "name containing number", val_err{0, true}, val_err{0.0, true}, val_err{false, true}, true},
@@ -76,13 +77,13 @@ var tests = []test_type{
 }
 
 func TestMain(m *testing.M) {
-	pool = constant.NewPool(pool_prefix)
+	node = constant.NewTree(node_prefix, node_delimiter)
 	os.Exit(m.Run())
 }
 
 func TestNew(t *testing.T) {
 	for _, test := range tests {
-		err := pool.New(test.pair.name, test.pair.value)
+		_, err := node.New(test.pair.name, test.pair.value)
 		if (err != nil) != test.new_error {
 			no_str := ""
 			if !test.new_error {
@@ -97,9 +98,39 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func TestDelimiter(t *testing.T) {
+	res := node.Delimiter()
+	if res != node_delimiter {
+		t.Error(
+			"Expected", node_delimiter,
+			"got", res,
+		)
+	}
+}
+
+func TestName(t *testing.T) {
+	name := node.Name()
+	if name != node_prefix {
+		t.Error(
+			"Expected", node_prefix,
+			"got", name,
+		)
+	}
+}
+
+func TestFullName(t *testing.T) {
+	full_name := node.Name()
+	if full_name != node_prefix {
+		t.Error(
+			"Expected", node_prefix,
+			"got", full_name,
+		)
+	}
+}
+
 func TestStr(t *testing.T) {
 	for _, test := range tests {
-		str := pool.Str(test.pair.name)
+		str := node.Str(test.pair.name)
 		if str != test.str {
 			t.Error(
 				"For", test.pair,
@@ -112,7 +143,7 @@ func TestStr(t *testing.T) {
 
 func TestInt(t *testing.T) {
 	for _, test := range tests {
-		val, err := pool.Int(test.pair.name)
+		val, err := node.Int(test.pair.name)
 		if val != test.int_res.val || (err != nil) != test.int_res.err {
 			t.Error(
 				"For", test.pair,
@@ -125,7 +156,7 @@ func TestInt(t *testing.T) {
 
 func TestFloat(t *testing.T) {
 	for _, test := range tests {
-		val, err := pool.Float(test.pair.name, 64)
+		val, err := node.Float(64, test.pair.name)
 		if val != test.float_res.val || (err != nil) != test.float_res.err {
 			t.Error(
 				"For", test.pair,
@@ -138,7 +169,7 @@ func TestFloat(t *testing.T) {
 
 func TestBool(t *testing.T) {
 	for _, test := range tests {
-		val, err := pool.Bool(test.pair.name)
+		val, err := node.Bool(test.pair.name)
 		if val != test.bool_res.val || (err != nil) != test.bool_res.err {
 			t.Error(
 				"For", test.pair,
@@ -151,11 +182,11 @@ func TestBool(t *testing.T) {
 
 func TestIsSet(t *testing.T) {
 	for _, test := range tests {
-		val := pool.IsSet(test.pair.name)
+		val := node.IsSet(test.pair.name)
 		if val != test.isset {
 			t.Error(
 				"For", test.pair,
-				"expected", test.new_error,
+				"expected", test.isset,
 				"got", val,
 			)
 		}
@@ -164,7 +195,7 @@ func TestIsSet(t *testing.T) {
 
 func TestDefault(t *testing.T) {
 	for _, test := range tests {
-		val := pool.Default(test.pair.name)
+		val := node.Default(test.pair.name)
 		if val != test.default_s {
 			t.Error(
 				"For", test.pair,
@@ -178,12 +209,12 @@ func TestDefault(t *testing.T) {
 func TestList(t *testing.T) {
 	exp_list := make([]string, 0)
 	for _, test := range tests {
-		if test.new_error == false {
+		if test.new_error == false && test.pair.value != nil {
 			exp_list = append(exp_list, test.pair.name)
 		}
 	}
 
-	res_list := pool.List()
+	res_list := node.List()
 
 	sort.StringSlice(exp_list).Sort()
 	sort.StringSlice(res_list).Sort()
@@ -199,12 +230,12 @@ func TestList(t *testing.T) {
 func TestEnvironment(t *testing.T) {
 	exp_list := make([]string, 0)
 	for _, test := range tests {
-		if test.new_error == false {
-			exp_list = append(exp_list, pool_prefix+test.pair.name)
+		if test.new_error == false && test.pair.value != nil {
+			exp_list = append(exp_list, node_prefix+node_delimiter+test.pair.name)
 		}
 	}
 
-	res_list := pool.Environment()
+	res_list := node.Environment()
 
 	sort.StringSlice(exp_list).Sort()
 	sort.StringSlice(res_list).Sort()
@@ -219,7 +250,7 @@ func TestEnvironment(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	for _, test := range tests {
-		err := pool.Delete(test.pair.name)
+		err := node.Delete(test.pair.name)
 		if (err != nil) != test.new_error {
 			no_str := ""
 			if !test.new_error {
@@ -233,7 +264,7 @@ func TestDelete(t *testing.T) {
 		}
 	}
 
-	list_len := len(pool.List())
+	list_len := len(node.List())
 	if list_len != 0 {
 		t.Error(
 			"expected 0 items left",

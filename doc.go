@@ -1,18 +1,19 @@
 /*
-Package constant provides a simple interface for creating an storing constants by a key in an application.
-If available constants are read from the environment, to provide dynamic configuration.
+Package constant provides an interface for creating and storing constants in a key based tree structure.
+If available, constants are read from the environment, to provide dynamic configuration.
 
-Package constant also provides a simple templating system to create constants based of the values of other constants.
+Package constant also provides a templating system to create constants based of the values of other constants.
 
 Template
 
-Package constant provides a simple template system using text/template (https://golang.org/pkg/text/template/) to allow constants to be expressed a combintation of other constants in the same pool.
+Package constant provides a template system using text/template (https://golang.org/pkg/text/template/) to allow nodes to be expressed as a combintation of other nodes in the same context.
 
-The following methods are available to use in a constant.
+The following methods are available to use in a node.
 
-	{{ const "name" }}
-		Returns the value of of another constant in the same pool named 'name'.
-		Self reference is not allowed and returns an empty string.
+	{{ const "path1" ["path2" ...] }}
+		Returns the value of of another node in the same context as defined by
+		path1[, path2 ...]. Self reference is not allowed and returns an empty string.
+		Nodes that don't exist return an empty string.
 
 		Example:
 			`{{ const "host" }}:{{ const "port" }}`
@@ -20,21 +21,21 @@ The following methods are available to use in a constant.
 			`localhost:3306`.
 
 		Caution:
-			Although there is a check in place to test if a constant references
-			itself, there is no check for cyclic dependancy. If a cyclic dependancy
-			is created then the program will enter an infinite loop.
+			Although there is a check in place to test if a node references	itself,
+			there is no check for cyclic dependancy. If a cyclic dependancy is
+			created then the program will enter an infinite loop.
 
 	{{ list }}
-		Returns a slice of all constants in the pool except itself.
+		Returns a slice of all nodes in the context except itself.
 
 		Example:
 			`{{ range list }}{{ . }}={{ const . }}; {{ end }}`
 			If host=`localhost` and port=`3306` then the above template would return
 			`host=localhost; port=3306; `.
 
-	{{ isset "name" }}
-		Returns whether or not a constant named 'name' is in the current pool. Same
-		as pool.IsSet(name).
+	{{ isset "path1" ["path2" ...] }}
+		Returns whether or not a node as defined by path1[, path2 ...] is in the
+		current context.
 
 		Example:
 			`{{ const "protocol" }}://{{ const "domain" }}{{if isset "port"}}:{{ const "port" }}{{end}}/{{ const "page" }}`
@@ -45,67 +46,120 @@ The following methods are available to use in a constant.
 			Or if the same constants are set as well as port=`8080` then the above
 			template would return `http://localhost:8080/index.html`.
 
+Template Context
+
+The context for a node includes the context's root node and all of its children recursively.
+The root node for a context is the parent of the node.
+Therefore the context for a node includes itself, its parent node, its parent's child nodes (siblings of the original node) and all the recursive children.
+A node is excluded from the context if its default value is nil.
+
+Other nodes in the same context are referenced by their path relative to the root of the context.
+This starts with the root of the context which is referenced as an empty string.
+Siblings are referenced by their name ("sibling name").
+Recursive children are referenced by the names of their parents followed by their name ("sibling name", "recursive child").
+
+For example if the folling tree structure is created
+
+	                                  ___   name: MYAPP  ___
+	                                /       value: nil       \
+	                               /            |             \
+	                    name: LOG         name: RUNTIME        name: DATABASE
+	                    value: nil        value: `dev`         value: `true`
+	               /        |                               /        |        \
+	 name: LEVEL       name: FILE            name: HOST         name: PORT       name: ADDRESS
+	  value: 5       value: `stdout`     value: `localhost`     value: 3306        value: ?
+	                                             |
+	                                      name: PROVIDER
+	                                     value: `internal`
+
+then 'ADDRESS' could be set to and would return
+
+	`{{ const "" }}`                 ->  `true`                        (value of parent)
+	`{{ const "HOST" }}`             ->  `localhost`
+	`{{ const "HOST" "PROVIDER" }}`  ->  `internal`
+	`{{ const "PORT" }}`             ->  `true`
+	`{{ const "ADDRESS" }}`          ->  ``                            (self reference not allowed)
+
+	`{{ list }}`                     ->  `[ HOST HOST_PROVIDER PORT]`  (includes an empty string at the start)
+	`{{ isset "HOST" }}`             ->  `true`
+	`{{ isset "SOMETHING" }}`        ->  `false`
+
+
 Example
 
-In the following example a pool is created to store constants related to MySQL.
-HOST, PORT, USER and PASSWORD have standard default values while ADDRESS is set by default to equal `HOST + ":" + PORT`.
+In the following example the tree from the above section (Template Context) is created.
+In this example 'ADDRESS' is set by default to equal `HOST + ":" + PORT`.
 
-Near the end HOST is updated via an envionment variable which, in turn, also updates ADDRESS.
+After creation, HOST is updated via an envionment variable which, in turn, also updates the value of ADDRESS.
 
 	package main
 
 	import (
-		"github.com/JamesStewy/constant"
 		"fmt"
+		"github.com/JamesStewy/constant"
 		"os"
 	)
 
-	var mysql_const *constant.Pool
+	var tree *constant.Node
 
 	func main() {
-		// Create new pool to store constants related to MySQL
-		mysql_const = constant.NewPool("MYSQL_")
+		// Create new tree for my app
+		tree = constant.NewTree("MYAPP", "_")
 
-		// Set default values for HOST, PORT, USER and PASSWORD
-		mysql_const.New("HOST", "localhost")
-		mysql_const.New("PORT", 3306)
-		mysql_const.New("USER", "root")
-		mysql_const.New("PASSWORD", "")
+		// Create LOG node
+		tree.New("LOG", nil)
+		tree.Node("LOG").New("LEVEL", 5)
+		tree.Node("LOG").New("FILE", "stdout")
+
+		// Create RUNTIME node
+		tree.New("RUNTIME", "dev")
+
+		// Create DATABASE node (using alternate method to LOG node)
+		mysql_tree, _ := tree.New("DATABASE", true)
+		mysql_tree.New("HOST", "localhost")
+		mysql_tree.Node("HOST").New("PROVIDER", "internal")
+		mysql_tree.New("PORT", 3306)
 
 		// Set ADDRESS to be equal to HOST + ":" + PORT
-		mysql_const.New("ADDRESS", `{{ const "HOST" }}:{{ const "PORT" }}`)
+		mysql_tree.New("ADDRESS", `{{ const "HOST" }}:{{ const "PORT" }}`)
 
 		display_pool()
 
 		// Update the MySQL host
-		os.Setenv("MYSQL_HOST", "mydomain.com")
-		fmt.Println("\nChanged MYSQL_HOST\n")
+		os.Setenv("MYAPP_DATABASE_HOST", "mydomain.com")
+		fmt.Println("\nChanged MYAPP_DATABASE_HOST to mydomain.com\n")
 
 		display_pool()
 	}
 
 	func display_pool() {
 		// Loop through each constant in the pool and display its value
-		for _, name := range mysql_const.List() {
-			// Call mysql_const.Str(name) to retrieve a constants value
-			fmt.Printf("%s=%s\n", name, mysql_const.Str(name))
+		for _, node := range tree.Nodes() {
+			// Call node.Str(name) to retrieve the node's value
+			fmt.Printf("%s=%s\n", node.FullName(), node.Str())
 		}
 	}
 
-The above example returns the following:
+The above example returns:
 
-	ADDRESS=localhost:3306
-	HOST=localhost
-	PORT=3306
-	USER=root
-	PASSWORD=
+	MYAPP_LOG_LEVEL=5
+	MYAPP_LOG_FILE=stdout
+	MYAPP_RUNTIME=dev
+	MYAPP_DATABASE=true
+	MYAPP_DATABASE_HOST=localhost
+	MYAPP_DATABASE_HOST_PROVIDER=internal
+	MYAPP_DATABASE_PORT=3306
+	MYAPP_DATABASE_ADDRESS=localhost:3306
 
-	Changed MYSQL_HOST
+	Changed MYAPP_DATABASE_HOST to mydomain.com
 
-	USER=root
-	PASSWORD=
-	ADDRESS=mydomain.com:3306
-	HOST=mydomain.com
-	PORT=3306
+	MYAPP_LOG_LEVEL=5
+	MYAPP_LOG_FILE=stdout
+	MYAPP_RUNTIME=dev
+	MYAPP_DATABASE=true
+	MYAPP_DATABASE_HOST=mydomain.com
+	MYAPP_DATABASE_HOST_PROVIDER=internal
+	MYAPP_DATABASE_PORT=3306
+	MYAPP_DATABASE_ADDRESS=mydomain.com:3306
 */
 package constant

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"sync"
 )
@@ -221,12 +222,12 @@ func (n *Node) Delete(path ...string) error {
 	return nil
 }
 
-// Returns a slice of names relative to the node 'n' for itself and all child nodes in the node that have non nil default values.
+// Returns a sorted slice of names relative to the node 'n' for itself and all child nodes in the node that have non nil default values.
 func (n *Node) List() []string {
 	return n.environmentOffset(len(n.path()))
 }
 
-// Returns a slice of full names for itself and all child nodes in the node that have non nil default values.
+// Returns a sorted slice of full names for itself and all child nodes in the node that have non nil default values.
 func (n *Node) Environment() []string {
 	return n.environmentOffset(0)
 }
@@ -271,5 +272,6 @@ func (n *Node) environmentOffset(offset int) []string {
 		env[i] = n.pathJoin(node.path()[offset:]...)
 	}
 
+	sort.StringSlice(env).Sort()
 	return env
 }

@@ -26,7 +26,7 @@ The following methods are available to use in a node.
 			created then the program will enter an infinite loop.
 
 	{{ list }}
-		Returns a slice of all nodes in the context except itself.
+		Returns a sorted slice of all nodes in the context except itself.
 
 		Example:
 			`{{ range list }}{{ . }}={{ const . }}; {{ end }}`
